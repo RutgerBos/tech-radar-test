@@ -4,7 +4,7 @@
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Tech Radar — 5 Segments</title>
+<title>Tech Radar — 3 Rings</title>
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="radar.js"></script>
@@ -17,37 +17,36 @@
 <svg id="radar"></svg>
 
 <script>
-fetch('./config-5.json').then(function(response) {
+fetch('./config.json').then(function(response) {
   return response.json();
 }).then(function(data) {
   radar_visualization({
     repo_url: "#",
-    title: "Tech Radar — 5 Segments",
+    title: "Tech Radar — 3 Rings",
     date: data.date,
     quadrants: [
       { name: "Languages" },
-      { name: "Cloud Platform" },
-      { name: "Platform & Ops" },
+      { name: "Infrastructure" },
       { name: "Datastores" },
-      { name: "Data Engineering" },
+      { name: "Data Management" },
     ],
+    // No explicit radius fields: auto-computed evenly spaced up to max_radius (default 400).
     rings: [
-      { name: "ADOPT",  color: "#5ba300", radius: 130 },
-      { name: "TRIAL",  color: "#009eb0", radius: 220 },
-      { name: "ASSESS", color: "#c7ba00", radius: 310 },
-      { name: "HOLD",   color: "#e09b96", radius: 400 }
+      { name: "ADOPT",  color: "#5ba300" },
+      { name: "ASSESS", color: "#c7ba00" },
+      { name: "HOLD",   color: "#e09b96" }
     ],
     entries: data.entries
   });
 }).catch(function(err) {
-  console.log('Error loading config-5.json', err);
+  console.log('Error loading config.json', err);
 });
 </script>
 
 <p style="margin: 20px 50px">
-  Switch: <a href="index.html">4 segments</a> |
-  <a href="index-3.html">3 segments</a> |
-  <strong>5 segments</strong>
+  Switch: <a href="index.html">4 rings (default)</a> |
+  <strong>3 rings</strong> |
+  <a href="index-5rings.html">5 rings</a>
 </p>
 
 </body>

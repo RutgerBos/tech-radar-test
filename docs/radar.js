@@ -80,12 +80,21 @@ function radar_visualization(config) {
     };
   });
 
-  const rings = [
-    { radius: 130 },
-    { radius: 220 },
-    { radius: 310 },
-    { radius: 400 }
-  ];
+  if (!config.rings || config.rings.length < 1) {
+    throw new Error("radar_visualization: config.rings must have at least 1 entry");
+  }
+  const num_rings = config.rings.length;
+  const r_inner = config.inner_radius || 30;
+  const r_max_default = config.max_radius || 400;
+
+  // Build local rings array: honour explicit per-ring radius values if supplied,
+  // otherwise auto-compute evenly-spaced radii up to r_max_default.
+  const rings = config.rings.map(function(r, i) {
+    var radius = (r.radius != null)
+      ? r.radius
+      : Math.round(r_inner + (r_max_default - r_inner) * (i + 1) / num_rings);
+    return { radius: radius };
+  });
 
   // Auto-compute legend offsets: place legends in two side columns (left and right
   // of the radar) so they never overlap the circle regardless of item count.
@@ -185,7 +194,7 @@ function radar_visualization(config) {
     // Use raw (monotone) angles for random generation to avoid wrap-around issues
     var t_raw_min = quadrants[quadrant].radial_raw_min * Math.PI;
     var t_raw_max = quadrants[quadrant].radial_raw_max * Math.PI;
-    var r_min = ring === 0 ? 30 : rings[ring - 1].radius;
+    var r_min = ring === 0 ? r_inner : rings[ring - 1].radius;
     var r_max = rings[ring].radius;
     var pad = 15;
 
@@ -234,6 +243,10 @@ function radar_visualization(config) {
   }
   for (var i=0; i<config.entries.length; i++) {
     var entry = config.entries[i];
+    if (entry.ring >= num_rings) {
+      console.warn("Entry '" + entry.label + "' has ring " + entry.ring + " but only " + num_rings + " rings defined; skipping.");
+      continue;
+    }
     segmented[entry.quadrant][entry.ring].push(entry);
   }
 
@@ -368,10 +381,11 @@ function radar_visualization(config) {
   function legend_transform(quadrant, ring, legendColumnWidth, index=null, previousHeight = null) {
     // Second column goes away from the radar: leftward for left-side segments, rightward otherwise.
     const col_dir = config.legend_offset[quadrant].x >= 0 ? 1 : -1;
-    const dx = ring < 2 ? 0 : col_dir * legendColumnWidth;
+    const col_break = Math.ceil(num_rings / 2);
+    const dx = ring < col_break ? 0 : col_dir * legendColumnWidth;
     let dy = (index == null ? -16 : index * config.legend_line_height);
 
-    if (ring % 2 === 1) {
+    if (ring % col_break === 1) {
       dy = dy + 36 + previousHeight;
     }
 
@@ -423,9 +437,10 @@ function radar_visualization(config) {
         .style("font-family", config.font_family)
         .style("font-size", "18px")
         .style("font-weight", "bold");
+      const col_break = Math.ceil(num_rings / 2);
       let previousLegendHeight = 0
       for (let ring = 0; ring < rings.length; ring++) {
-        if (ring % 2 === 0) {
+        if (ring % col_break === 0) {
           previousLegendHeight = 0
         }
         legend.append("text")
