@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tech Radar — 3 Segments, 5 Rings</title>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="radar.js"></script>
+
+<link rel="stylesheet" href="radar.css">
+</head>
+
+<body>
+
+<svg id="radar"></svg>
+
+<script>
+fetch('./config-3.json').then(function(response) {
+  return response.json();
+}).then(function(data) {
+  radar_visualization({
+    repo_url: "#",
+    title: "Tech Radar — 3 Segments, 5 Rings",
+    date: data.date,
+    quadrants: [
+      { name: "Languages" },
+      { name: "Infrastructure" },
+      { name: "Data" },
+    ],
+    rings: [
+      { name: "ADOPT",    color: "#5ba300" },
+      { name: "TRIAL",    color: "#009eb0" },
+      { name: "ASSESS",   color: "#c7ba00" },
+      { name: "HOLD",     color: "#e09b96" },
+      { name: "OBSOLETE", color: "#aaaaaa" }
+    ],
+    entries: data.entries
+  });
+}).catch(function(err) {
+  console.log('Error loading config-3.json', err);
+});
+</script>
+
+<p style="margin: 20px 50px">
+  Segments: <a href="index-3.html">3 (4 rings)</a> |
+  <a href="index-3seg-3rings.html">3 segments, 3 rings</a> |
+  <strong>3 segments, 5 rings</strong>
+  &nbsp;|&nbsp;
+  Rings: <a href="index-5rings.html">4 segments, 5 rings</a> |
+  <a href="index-5seg-5rings.html">5 segments, 5 rings</a>
+</p>
+
+</body>
+</html>

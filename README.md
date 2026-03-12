@@ -63,12 +63,13 @@ radar_visualization({
   entries: [
    {
       label: "Some Entry",
-      quadrant: 3,          // 0,1,2,3 (counting clockwise, starting from bottom right)
-      ring: 2,              // 0,1,2,3 (starting from inside)
-      moved: -1             // -1 = moved out (triangle pointing down)
+      quadrant: 3,          // 0-based index into quadrants array (clockwise from bottom right)
+      ring: 2,              // 0-based index into rings array (starting from inside)
+      moved: -1,            // -1 = moved out (triangle pointing down)
                             //  0 = not moved (circle)
                             //  1 = moved in  (triangle pointing up)
                             //  2 = new       (star)
+      remarks: "Optional free-text note shown in the hover tooltip."
    },
     // ...
   ]
@@ -80,6 +81,89 @@ in adjusting the size of the radar.
 
 As a working example, you can check out `docs/index.html` &mdash; the source of our [public Tech
 Radar](http://zalando.github.io/tech-radar/).
+
+## Arbitrary segment and ring counts
+
+The radar supports any number of **segments** (quadrants) and **rings** — not just the classic 4×4 layout.
+
+### Changing the number of segments
+
+Add or remove entries in the `quadrants` array. Segments are distributed evenly around the circle. Legend tables are placed left and right of the radar automatically.
+
+```js
+// 3-segment radar
+quadrants: [
+  { name: "Languages" },
+  { name: "Infrastructure" },
+  { name: "Data" },
+]
+
+// 5-segment radar
+quadrants: [
+  { name: "Languages" },
+  { name: "Cloud Platform" },
+  { name: "Platform & Ops" },
+  { name: "Datastores" },
+  { name: "Data Engineering" },
+]
+```
+
+Each entry's `quadrant` field is a 0-based index into this array. Entries referencing a quadrant index that doesn't exist are ignored.
+
+### Changing the number of rings
+
+Add or remove entries in the `rings` array. Ring radii are auto-computed to fill the radar evenly if no `radius` field is provided.
+
+```js
+// 3 rings — auto-spaced
+rings: [
+  { name: "ADOPT",  color: "#5ba300" },
+  { name: "ASSESS", color: "#c7ba00" },
+  { name: "HOLD",   color: "#e09b96" }
+]
+
+// 5 rings — explicit radii
+rings: [
+  { name: "ADOPT",    color: "#5ba300", radius: 80  },
+  { name: "TRIAL",    color: "#009eb0", radius: 160 },
+  { name: "ASSESS",   color: "#c7ba00", radius: 240 },
+  { name: "HOLD",     color: "#e09b96", radius: 320 },
+  { name: "OBSOLETE", color: "#aaaaaa", radius: 400 }
+]
+```
+
+Each entry's `ring` field is a 0-based index into this array. Entries with a `ring` value beyond the defined rings are silently skipped — useful for showing a subset of rings without changing the data file.
+
+Two optional top-level parameters control auto-computed radii:
+
+| Parameter | Default | Description |
+|---|---|---|
+| `inner_radius` | `30` | Radius of the innermost blank circle |
+| `max_radius` | `400` | Outer radius of the last ring |
+
+### Remarks / tooltip annotations
+
+Each entry can carry an optional `remarks` field. Its content is shown in the hover tooltip below the entry label, word-wrapped and rendered in italic.
+
+```json
+{
+  "label": "Go",
+  "quadrant": 0,
+  "ring": 0,
+  "moved": 0,
+  "remarks": "Primary language for backend services. Strong concurrency model and fast compile times."
+}
+```
+
+### Example pages
+
+`docs/` contains example pages for various combinations:
+
+| | 3 rings | 4 rings | 5 rings |
+|---|---|---|---|
+| **3 segments** | [index-3seg-3rings.html](docs/index-3seg-3rings.html) | [index-3.html](docs/index-3.html) | [index-3seg-5rings.html](docs/index-3seg-5rings.html) |
+| **4 segments** | [index-3rings.html](docs/index-3rings.html) | [index.html](docs/index.html) *(default)* | [index-5rings.html](docs/index-5rings.html) |
+| **5 segments** | [index-5seg-3rings.html](docs/index-5seg-3rings.html) | [index-5.html](docs/index-5.html) | [index-5seg-5rings.html](docs/index-5seg-5rings.html) |
 
 ## Deployment
 
