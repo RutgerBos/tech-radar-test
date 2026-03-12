@@ -391,7 +391,7 @@ function radar_visualization(config) {
     let dy = (index == null ? -16 : index * config.legend_line_height);
 
     if (ring % col_break !== 0) {
-      dy = dy + 36 + previousHeight;
+      dy = dy + previousHeight;
     }
 
     return translate(
@@ -447,6 +447,10 @@ function radar_visualization(config) {
       for (let ring = 0; ring < rings.length; ring++) {
         if (ring % col_break === 0) {
           previousLegendHeight = 0
+        } else {
+          // Advance the cursor by the 36px inter-ring gap so that previousLegendHeight
+          // represents the true y-bottom of all rings rendered so far in this column.
+          previousLegendHeight += 36
         }
         legend.append("text")
           .attr("transform", legend_transform(quadrant, ring, config.legend_column_width, null, previousLegendHeight))
