@@ -106,6 +106,39 @@ function radar_visualization(config) {
     return { radius: radius };
   });
 
+  // Normalize entry quadrant/ring fields: accept either 0-based index (existing
+  // behaviour) or the name string from config.quadrants / config.rings.
+  // Matching is case-insensitive. Unknown names produce a console.warn and leave
+  // the value as-is (it will be filtered out downstream as out-of-range).
+  (function normalizeEntries() {
+    var quadrantIndex = {};
+    config.quadrants.forEach(function(q, i) {
+      quadrantIndex[q.name.toLowerCase()] = i;
+    });
+    var ringIndex = {};
+    config.rings.forEach(function(r, i) {
+      ringIndex[r.name.toLowerCase()] = i;
+    });
+    config.entries.forEach(function(entry) {
+      if (typeof entry.quadrant === 'string') {
+        var qi = quadrantIndex[entry.quadrant.toLowerCase()];
+        if (qi === undefined) {
+          console.warn('radar_visualization: unknown quadrant "' + entry.quadrant + '" on entry "' + entry.label + '"');
+        } else {
+          entry.quadrant = qi;
+        }
+      }
+      if (typeof entry.ring === 'string') {
+        var ri = ringIndex[entry.ring.toLowerCase()];
+        if (ri === undefined) {
+          console.warn('radar_visualization: unknown ring "' + entry.ring + '" on entry "' + entry.label + '"');
+        } else {
+          entry.ring = ri;
+        }
+      }
+    });
+  })();
+
   // Auto-compute legend offsets: place legends in two side columns (left and right
   // of the radar) so they never overlap the circle regardless of item count.
   // x_right / x_left are chosen so text at those columns is always outside the radar.
