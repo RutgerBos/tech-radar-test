@@ -61,16 +61,16 @@ radar_visualization({
   print_layout: true,
   links_in_new_tabs: true,
   entries: [
-   {
+    {
       label: "Some Entry",
-      quadrant: 3,          // 0-based index into quadrants array (clockwise from bottom right)
-      ring: 2,              // 0-based index into rings array (starting from inside)
-      moved: -1,            // -1 = moved out (triangle pointing down)
-                            //  0 = not moved (circle)
-                            //  1 = moved in  (triangle pointing up)
-                            //  2 = new       (star)
+      quadrant: "Top Right",  // quadrant name (recommended) or 0-based index
+      ring: "THIRD",          // ring name (recommended) or 0-based index
+      moved: -1,              // -1 = moved out (triangle pointing down)
+                              //  0 = not moved (circle)
+                              //  1 = moved in  (triangle pointing up)
+                              //  2 = new       (star)
       remarks: "Optional free-text note shown in the hover tooltip."
-   },
+    },
     // ...
   ]
 });
@@ -108,7 +108,7 @@ quadrants: [
 ]
 ```
 
-Each entry's `quadrant` field is a 0-based index into this array. Entries referencing a quadrant index that doesn't exist are ignored.
+Each entry's `quadrant` field can be the quadrant **name** (recommended) or a 0-based index. Entries referencing an unknown name or out-of-range index are ignored.
 
 ### Changing the number of rings
 
@@ -132,7 +132,7 @@ rings: [
 ]
 ```
 
-Each entry's `ring` field is a 0-based index into this array. Entries with a `ring` value beyond the defined rings are silently skipped — useful for showing a subset of rings without changing the data file.
+Each entry's `ring` field can be the ring **name** (recommended) or a 0-based index. Entries referencing an unknown name or a value beyond the defined rings are silently skipped — useful for showing a subset of rings without changing the data file.
 
 Two optional top-level parameters control auto-computed radii:
 
