@@ -35,12 +35,6 @@ function radar_visualization(config) {
   config.links_in_new_tabs = ("links_in_new_tabs" in config) ? config.links_in_new_tabs : true;
   config.repo_url = config.repo_url || '#';
   config.print_ring_descriptions_table = ("print_ring_descriptions_table" in config) ? config.print_ring_descriptions_table : false;
-  config.legend_offset = config.legend_offset || [
-    { x: 450, y: 90 },
-    { x: -675, y: 90 },
-    { x: -675, y: -310 },
-    { x: 450, y: -310 }
-  ]
   config.title_offset = config.title_offset || { x: -675, y: -420 };
   config.footer_offset = config.footer_offset || { x: -155, y: 450 };
   config.legend_column_width = config.legend_column_width || 140
@@ -62,13 +56,29 @@ function radar_visualization(config) {
     return min + (random() + random()) * 0.5 * (max - min);
   }
 
-  // radial_min / radial_max are multiples of PI
-  const quadrants = [
-    { radial_min: 0, radial_max: 0.5, factor_x: 1, factor_y: 1 },
-    { radial_min: 0.5, radial_max: 1, factor_x: -1, factor_y: 1 },
-    { radial_min: -1, radial_max: -0.5, factor_x: -1, factor_y: -1 },
-    { radial_min: -0.5, radial_max: 0, factor_x: 1, factor_y: -1 }
-  ];
+  // Compute N equal segments from config.quadrants.length.
+  // radial_min / radial_max are multiples of PI, normalized to (-1, 1].
+  // radial_raw_min / radial_raw_max are the un-normalized monotone values,
+  // used for random point generation to avoid wrap-around issues.
+  const num_segments = config.quadrants.length;
+  const arc_size = 2 / num_segments; // full circle = 2.0 in PI-units
+
+  function normalize_angle(v) {
+    return v > 1 ? v - 2 : v;
+  }
+
+  const quadrants = config.quadrants.map(function(_, i) {
+    var raw_min = i * arc_size;
+    var raw_max = (i + 1) * arc_size;
+    var mid_raw = (raw_min + raw_max) / 2;
+    return {
+      radial_min:     normalize_angle(raw_min),
+      radial_max:     normalize_angle(raw_max),
+      radial_raw_min: raw_min,  // monotone, for random()
+      radial_raw_max: raw_max,
+      mid_angle:      normalize_angle(mid_raw) * Math.PI
+    };
+  });
 
   const rings = [
     { radius: 130 },
@@ -76,6 +86,48 @@ function radar_visualization(config) {
     { radius: 310 },
     { radius: 400 }
   ];
+
+  // Auto-compute legend offsets: place legends in two side columns (left and right
+  // of the radar) so they never overlap the circle regardless of item count.
+  // x_right / x_left are chosen so text at those columns is always outside the radar.
+  if (!config.legend_offset) {
+    var r_max = rings[rings.length - 1].radius;
+    var col_width = config.legend_column_width || 140;
+    var legend_pad = 20;
+    var x_right = r_max + legend_pad;                  // right column anchor
+    var x_left  = -(r_max + col_width + legend_pad);   // left column anchor
+
+    // Assign each segment to left (cos < 0) or right (cos >= 0) column.
+    var right_segs = [], left_segs = [];
+    quadrants.forEach(function(q, i) {
+      (Math.cos(q.mid_angle) >= 0 ? right_segs : left_segs).push(i);
+    });
+
+    // Within each column sort top-to-bottom (most negative sin = highest on screen).
+    function sort_top_to_bottom(arr) {
+      arr.sort(function(a, b) {
+        return Math.sin(quadrants[a].mid_angle) - Math.sin(quadrants[b].mid_angle);
+      });
+    }
+    sort_top_to_bottom(right_segs);
+    sort_top_to_bottom(left_segs);
+
+    // Space y anchors evenly across the radar's vertical extent.
+    function assign_y(indices) {
+      var n = indices.length;
+      return indices.map(function(_, k) {
+        return Math.round(-r_max + (2 * k + 1) / (2 * n) * 2 * r_max);
+      });
+    }
+
+    config.legend_offset = new Array(num_segments);
+    assign_y(right_segs).forEach(function(y, k) {
+      config.legend_offset[right_segs[k]] = { x: x_right, y: y };
+    });
+    assign_y(left_segs).forEach(function(y, k) {
+      config.legend_offset[left_segs[k]] = { x: x_left, y: y };
+    });
+  }
 
   function polar(cartesian) {
     var x = cartesian.x;
@@ -106,47 +158,56 @@ function radar_visualization(config) {
     }
   }
 
-  function bounded_box(point, min, max) {
-    return {
-      x: bounded_interval(point.x, min.x, max.x),
-      y: bounded_interval(point.y, min.y, max.y)
+  // Clamp angle t into [t_min, t_max], handling wrap-around (t_min > t_max).
+  function clamp_angle(t, t_min, t_max) {
+    if (t_min <= t_max) {
+      return Math.max(t_min, Math.min(t_max, t));
     }
+    // Wrap-around segment: valid range is [t_min, PI] ∪ [-PI, t_max]
+    if (t >= t_min || t <= t_max) return t;
+    // Clamp to nearest boundary (using circular distance)
+    var d_min = Math.abs(t - t_min);
+    var d_max = Math.abs(t - t_max);
+    d_min = Math.min(d_min, 2 * Math.PI - d_min);
+    d_max = Math.min(d_max, 2 * Math.PI - d_max);
+    return d_min < d_max ? t_min : t_max;
+  }
+
+  // Check whether angle a is within [t_min, t_max], handling wrap-around.
+  function angle_in_range(a, t_min, t_max) {
+    if (t_min <= t_max) return a >= t_min && a <= t_max;
+    return a >= t_min || a <= t_max;
   }
 
   function segment(quadrant, ring) {
-    var polar_min = {
-      t: quadrants[quadrant].radial_min * Math.PI,
-      r: ring === 0 ? 30 : rings[ring - 1].radius
-    };
-    var polar_max = {
-      t: quadrants[quadrant].radial_max * Math.PI,
-      r: rings[ring].radius
-    };
-    var cartesian_min = {
-      x: 15 * quadrants[quadrant].factor_x,
-      y: 15 * quadrants[quadrant].factor_y
-    };
-    var cartesian_max = {
-      x: rings[3].radius * quadrants[quadrant].factor_x,
-      y: rings[3].radius * quadrants[quadrant].factor_y
-    };
+    var t_min = quadrants[quadrant].radial_min * Math.PI;
+    var t_max = quadrants[quadrant].radial_max * Math.PI;
+    // Use raw (monotone) angles for random generation to avoid wrap-around issues
+    var t_raw_min = quadrants[quadrant].radial_raw_min * Math.PI;
+    var t_raw_max = quadrants[quadrant].radial_raw_max * Math.PI;
+    var r_min = ring === 0 ? 30 : rings[ring - 1].radius;
+    var r_max = rings[ring].radius;
+    var pad = 15;
+
     return {
       clipx: function(d) {
-        var c = bounded_box(d, cartesian_min, cartesian_max);
-        var p = bounded_ring(polar(c), polar_min.r + 15, polar_max.r - 15);
-        d.x = cartesian(p).x; // adjust data too!
+        var p = polar(d);
+        p.t = clamp_angle(p.t, t_min, t_max);
+        p.r = bounded_interval(p.r, r_min + pad, r_max - pad);
+        d.x = cartesian(p).x;
         return d.x;
       },
       clipy: function(d) {
-        var c = bounded_box(d, cartesian_min, cartesian_max);
-        var p = bounded_ring(polar(c), polar_min.r + 15, polar_max.r - 15);
-        d.y = cartesian(p).y; // adjust data too!
+        var p = polar(d);
+        p.t = clamp_angle(p.t, t_min, t_max);
+        p.r = bounded_interval(p.r, r_min + pad, r_max - pad);
+        d.y = cartesian(p).y;
         return d.y;
       },
       random: function() {
         return cartesian({
-          t: random_between(polar_min.t, polar_max.t),
-          r: normal_between(polar_min.r, polar_max.r)
+          t: random_between(t_raw_min, t_raw_max),
+          r: normal_between(r_min, r_max)
         });
       }
     }
@@ -164,10 +225,10 @@ function radar_visualization(config) {
   }
 
   // partition entries according to segments
-  var segmented = new Array(4);
-  for (let quadrant = 0; quadrant < 4; quadrant++) {
-    segmented[quadrant] = new Array(4);
-    for (var ring = 0; ring < 4; ring++) {
+  var segmented = new Array(num_segments);
+  for (let quadrant = 0; quadrant < num_segments; quadrant++) {
+    segmented[quadrant] = new Array(rings.length);
+    for (var ring = 0; ring < rings.length; ring++) {
       segmented[quadrant][ring] = [];
     }
   }
@@ -177,9 +238,17 @@ function radar_visualization(config) {
   }
 
   // assign unique sequential id to each entry
+  // Sort quadrants clockwise from top (angle closest to -PI/2 = upward in SVG)
+  var quadrant_order = Array.from({length: num_segments}, function(_, i) { return i; });
+  quadrant_order.sort(function(a, b) {
+    function clockwise_from_top(t) { return ((t + Math.PI / 2) + 2 * Math.PI) % (2 * Math.PI); }
+    return clockwise_from_top(quadrants[a].mid_angle) - clockwise_from_top(quadrants[b].mid_angle);
+  });
+
   var id = 1;
-  for (quadrant of [2,3,1,0]) {
-    for (var ring = 0; ring < 4; ring++) {
+  for (var qi = 0; qi < num_segments; qi++) {
+    var quadrant = quadrant_order[qi];
+    for (var ring = 0; ring < rings.length; ring++) {
       var entries = segmented[quadrant][ring];
       entries.sort(function(a,b) { return a.label.localeCompare(b.label); })
       for (var i=0; i<entries.length; i++) {
@@ -192,13 +261,36 @@ function radar_visualization(config) {
     return "translate(" + x + "," + y + ")";
   }
 
+  // Compute viewbox for a zoomed single segment using its actual arc bounding box.
   function viewbox(quadrant) {
-    return [
-      Math.max(0, quadrants[quadrant].factor_x * 400) - 420,
-      Math.max(0, quadrants[quadrant].factor_y * 400) - 420,
-      440,
-      440
-    ].join(" ");
+    var t_min = quadrants[quadrant].radial_min * Math.PI;
+    var t_max = quadrants[quadrant].radial_max * Math.PI;
+    var R = rings[rings.length - 1].radius;
+    var pad = 20;
+
+    var points = [
+      {x: 0, y: 0},
+      {x: R * Math.cos(t_min), y: R * Math.sin(t_min)},
+      {x: R * Math.cos(t_max), y: R * Math.sin(t_max)}
+    ];
+
+    // Include any axis-crossing extremes within the arc range
+    var axis_angles = [0, Math.PI / 2, Math.PI, -Math.PI / 2, -Math.PI];
+    for (var j = 0; j < axis_angles.length; j++) {
+      var a = axis_angles[j];
+      if (angle_in_range(a, t_min, t_max)) {
+        points.push({x: R * Math.cos(a), y: R * Math.sin(a)});
+      }
+    }
+
+    var xs = points.map(function(p) { return p.x; });
+    var ys = points.map(function(p) { return p.y; });
+    var x_min = Math.min.apply(null, xs) - pad;
+    var y_min = Math.min.apply(null, ys) - pad;
+    var x_max = Math.max.apply(null, xs) + pad;
+    var y_max = Math.max.apply(null, ys) + pad;
+
+    return [x_min, y_min, x_max - x_min, y_max - y_min].join(" ");
   }
 
   // adjust with config.scale.
@@ -223,17 +315,17 @@ function radar_visualization(config) {
   // define default font-family
   config.font_family = config.font_family || "Arial, Helvetica";
 
-  // draw grid lines
-  grid.append("line")
-    .attr("x1", 0).attr("y1", -400)
-    .attr("x2", 0).attr("y2", 400)
-    .style("stroke", config.colors.grid)
-    .style("stroke-width", 1);
-  grid.append("line")
-    .attr("x1", -400).attr("y1", 0)
-    .attr("x2", 400).attr("y2", 0)
-    .style("stroke", config.colors.grid)
-    .style("stroke-width", 1);
+  // draw segment divider lines (one per segment boundary, from center to edge)
+  var max_radius = rings[rings.length - 1].radius;
+  for (var i = 0; i < num_segments; i++) {
+    var angle = quadrants[i].radial_min * Math.PI;
+    grid.append("line")
+      .attr("x1", 0).attr("y1", 0)
+      .attr("x2", max_radius * Math.cos(angle))
+      .attr("y2", max_radius * Math.sin(angle))
+      .style("stroke", config.colors.grid)
+      .style("stroke-width", 1);
+  }
 
   // background color. Usage `.attr("filter", "url(#solid)")`
   // SOURCE: https://stackoverflow.com/a/31013492/2609980
@@ -274,7 +366,9 @@ function radar_visualization(config) {
   }
 
   function legend_transform(quadrant, ring, legendColumnWidth, index=null, previousHeight = null) {
-    const dx = ring < 2 ? 0 : legendColumnWidth;
+    // Second column goes away from the radar: leftward for left-side segments, rightward otherwise.
+    const col_dir = config.legend_offset[quadrant].x >= 0 ? 1 : -1;
+    const dx = ring < 2 ? 0 : col_dir * legendColumnWidth;
     let dy = (index == null ? -16 : index * config.legend_line_height);
 
     if (ring % 2 === 1) {
@@ -319,7 +413,7 @@ function radar_visualization(config) {
 
     // legend
     const legend = radar.append("g");
-    for (let quadrant = 0; quadrant < 4; quadrant++) {
+    for (let quadrant = 0; quadrant < num_segments; quadrant++) {
       legend.append("text")
         .attr("transform", translate(
           config.legend_offset[quadrant].x,
@@ -330,7 +424,7 @@ function radar_visualization(config) {
         .style("font-size", "18px")
         .style("font-weight", "bold");
       let previousLegendHeight = 0
-      for (let ring = 0; ring < 4; ring++) {
+      for (let ring = 0; ring < rings.length; ring++) {
         if (ring % 2 === 0) {
           previousLegendHeight = 0
         }

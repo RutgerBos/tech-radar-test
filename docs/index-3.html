@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tech Radar — 3 Segments</title>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="radar.js"></script>
+
+<link rel="stylesheet" href="radar.css">
+</head>
+
+<body>
+
+<svg id="radar"></svg>
+
+<script>
+fetch('./config-3.json').then(function(response) {
+  return response.json();
+}).then(function(data) {
+  radar_visualization({
+    repo_url: "#",
+    title: "Tech Radar — 3 Segments",
+    date: data.date,
+    quadrants: [
+      { name: "Languages" },
+      { name: "Infrastructure" },
+      { name: "Data" },
+    ],
+    rings: [
+      { name: "ADOPT", color: "#5ba300" },
+      { name: "TRIAL", color: "#009eb0" },
+      { name: "ASSESS", color: "#c7ba00" },
+      { name: "HOLD", color: "#e09b96" }
+    ],
+    entries: data.entries
+  });
+}).catch(function(err) {
+  console.log('Error loading config-3.json', err);
+});
+</script>
+
+<p style="margin: 20px 50px">
+  Switch: <a href="index.html">4 segments</a> |
+  <strong>3 segments</strong> |
+  <a href="index-5.html">5 segments</a>
+</p>
+
+</body>
+</html>
