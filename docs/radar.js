@@ -225,6 +225,7 @@ function radar_visualization(config) {
   // position each entry randomly in its segment
   for (var i = 0; i < config.entries.length; i++) {
     var entry = config.entries[i];
+    if (entry.ring >= num_rings) continue; // also checked below when partitioning
     entry.segment = segment(entry.quadrant, entry.ring);
     var point = entry.segment.random();
     entry.x = point.x;
@@ -385,7 +386,7 @@ function radar_visualization(config) {
     const dx = ring < col_break ? 0 : col_dir * legendColumnWidth;
     let dy = (index == null ? -16 : index * config.legend_line_height);
 
-    if (ring % col_break === 1) {
+    if (ring % col_break !== 0) {
       dy = dy + 36 + previousHeight;
     }
 
