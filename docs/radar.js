@@ -121,11 +121,14 @@ function radar_visualization(config) {
     sort_top_to_bottom(right_segs);
     sort_top_to_bottom(left_segs);
 
-    // Space y anchors evenly across the radar's vertical extent.
+    // Space y anchors evenly across the full usable SVG height rather than just
+    // r_max. When N≥3 segments share a column, r_max alone gives slots too short
+    // to hold all ring entries without overflowing into the adjacent segment title.
+    var legend_half_height = Math.max(r_max, Math.round((config.height || 1000) / 2 - 50));
     function assign_y(indices) {
       var n = indices.length;
       return indices.map(function(_, k) {
-        return Math.round(-r_max + (2 * k + 1) / (2 * n) * 2 * r_max);
+        return Math.round(-legend_half_height + (2 * k + 1) / (2 * n) * 2 * legend_half_height);
       });
     }
 
