@@ -23,14 +23,24 @@
 
 function radar_visualization(config) {
 
+  if (!config.quadrants || config.quadrants.length < 1) {
+    throw new Error("radar_visualization: config.quadrants must have at least 1 entry");
+  }
+  if (!config.rings || config.rings.length < 1) {
+    throw new Error("radar_visualization: config.rings must have at least 1 entry");
+  }
+  if (!config.entries || !Array.isArray(config.entries)) {
+    throw new Error("radar_visualization: config.entries must be an array");
+  }
+
   config.svg_id = config.svg || "radar";
   config.width = config.width || 1450;
   config.height = config.height || 1000;
-  config.colors = ("colors" in config) ? config.colors : {
-      background: "#fff",
-      grid: '#dddde0',
-      inactive: "#ddd"
-    };
+  config.colors = Object.assign({
+    background: "#fff",
+    grid: '#dddde0',
+    inactive: "#ddd"
+  }, config.colors || {});
   config.print_layout = ("print_layout" in config) ? config.print_layout : true;
   config.links_in_new_tabs = ("links_in_new_tabs" in config) ? config.links_in_new_tabs : true;
   config.repo_url = config.repo_url || '#';
@@ -319,7 +329,12 @@ function radar_visualization(config) {
   var scaled_width = config.width * config.scale;
   var scaled_height = config.height * config.scale;
 
-  var svg = d3.select("svg#" + config.svg_id)
+  var svg = d3.select("svg#" + config.svg_id);
+  if (svg.empty()) {
+    console.error("radar_visualization: no <svg id=\"" + config.svg_id + "\"> element found on page");
+    return;
+  }
+  svg
     .style("background-color", config.colors.background)
     .attr("width", scaled_width)
     .attr("height", scaled_height);
@@ -560,6 +575,7 @@ function radar_visualization(config) {
     .style("fill", "#333");
 
   // Wrap a string into lines no longer than maxChars, breaking on word boundaries.
+  // Words longer than maxChars are placed on their own line rather than dropped.
   function wrapToLines(text, maxChars) {
     var words = text.split(" ");
     var lines = [], current = "";
@@ -586,8 +602,8 @@ function radar_visualization(config) {
 
       // Build lines: label first, then word-wrapped remarks
       var lines = [{ text: d.label, italic: false }];
-      if (d.remarks) {
-        wrapToLines(d.remarks, 45).forEach(function(line) {
+      if (d.remarks && d.remarks.trim()) {
+        wrapToLines(d.remarks.trim(), 45).forEach(function(line) {
           lines.push({ text: line, italic: true });
         });
       }
