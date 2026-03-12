@@ -556,11 +556,45 @@ function radar_visualization(config) {
     .attr("d", "M 0,0 10,0 5,8 z")
     .style("fill", "#333");
 
+  // Wrap a string into lines no longer than maxChars, breaking on word boundaries.
+  function wrapToLines(text, maxChars) {
+    var words = text.split(" ");
+    var lines = [], current = "";
+    words.forEach(function(w) {
+      var candidate = current ? current + " " + w : w;
+      if (candidate.length > maxChars && current.length > 0) {
+        lines.push(current);
+        current = w;
+      } else {
+        current = candidate;
+      }
+    });
+    if (current) lines.push(current);
+    return lines;
+  }
+
   function showBubble(d) {
     if (d.active || config.print_layout) {
-      var tooltip = d3.select("#bubble text")
+      var textEl = d3.select("#bubble text");
+      textEl.selectAll("tspan").remove();
+
+      // Label line
+      textEl.append("tspan")
+        .attr("x", 0).attr("dy", 0)
         .text(d.label);
-      var bbox = tooltip.node().getBBox();
+
+      // Optional remarks lines (word-wrapped at ~45 chars)
+      if (d.remarks) {
+        wrapToLines(d.remarks, 45).forEach(function(line, i) {
+          textEl.append("tspan")
+            .attr("x", 0).attr("dy", i === 0 ? "1.5em" : "1.2em")
+            .style("font-style", "italic")
+            .style("opacity", "0.85")
+            .text(line);
+        });
+      }
+
+      var bbox = textEl.node().getBBox();
       d3.select("#bubble")
         .attr("transform", translate(d.x - bbox.width / 2, d.y - 16))
         .style("opacity", 0.8);

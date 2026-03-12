@@ -359,7 +359,8 @@
       "label": "Kubernetes",
       "link": "https://engineering.zalando.com/tags/kubernetes.html",
       "active": true,
-      "moved": 0
+      "moved": 0,
+      "remarks": "Standard container orchestration platform across all teams. Managed via Zalando's internal Kubernetes-as-a-service offering."
     },
     {
       "quadrant": 1,
@@ -424,7 +425,8 @@
       "label": "Go",
       "link": "https://engineering.zalando.com/tags/golang.html",
       "active": true,
-      "moved": 0
+      "moved": 0,
+      "remarks": "Primary language for backend services. Strong concurrency model and fast compile times make it our default choice for new microservices."
     },
     {
       "quadrant": 0,
@@ -495,7 +497,8 @@
       "label": "Rust",
       "link": "https://engineering.zalando.com/tags/rust.html",
       "active": true,
-      "moved": 0
+      "moved": 0,
+      "remarks": "On hold pending broader team expertise. Promising for performance-critical components but adoption is limited by steep learning curve."
     },
     {
       "quadrant": 0,
