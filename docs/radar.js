@@ -271,6 +271,10 @@ function radar_visualization(config) {
     }
   }
 
+  // Drop entries whose ring is out of range — they have no segment/position and
+  // would crash the force simulation in ticked().
+  config.entries = config.entries.filter(function(e) { return e.ring < num_rings; });
+
   function translate(x, y) {
     return "translate(" + x + "," + y + ")";
   }
