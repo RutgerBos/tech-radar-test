@@ -600,18 +600,19 @@ function radar_visualization(config) {
       });
 
       var bbox = textEl.node().getBBox();
-      // Position bubble so its bottom edge sits just above the blip.
+      // bbox.x/y are the actual top-left of rendered glyphs (y is negative due to ascent).
+      // Position bubble group so rect bottom sits just above the blip.
       d3.select("#bubble")
-        .attr("transform", translate(d.x - bbox.width / 2, d.y - bbox.height - PAD * 2 - 6))
+        .attr("transform", translate(d.x - bbox.x - bbox.width / 2, d.y - bbox.y - bbox.height - PAD * 2 - 6))
         .style("opacity", 0.8);
       d3.select("#bubble rect")
-        .attr("x", -PAD)
-        .attr("y", -PAD)
+        .attr("x", bbox.x - PAD)
+        .attr("y", bbox.y - PAD)
         .attr("width",  bbox.width  + PAD * 2)
         .attr("height", bbox.height + PAD * 2);
       // Pointer triangle sits just below the rect, centred.
       d3.select("#bubble path")
-        .attr("transform", translate(bbox.width / 2 - 5, bbox.height + PAD));
+        .attr("transform", translate(bbox.x + bbox.width / 2 - 5, bbox.y + bbox.height + PAD));
     }
   }
 
