@@ -575,36 +575,43 @@ function radar_visualization(config) {
 
   function showBubble(d) {
     if (d.active || config.print_layout) {
+      var PAD = 5;
+      var LINE = 14; // px between baselines at font-size 10px
+
       var textEl = d3.select("#bubble text");
       textEl.selectAll("tspan").remove();
 
-      // Label line
-      textEl.append("tspan")
-        .attr("x", 0).attr("dy", 0)
-        .text(d.label);
-
-      // Optional remarks lines (word-wrapped at ~45 chars)
+      // Build lines: label first, then word-wrapped remarks
+      var lines = [{ text: d.label, italic: false }];
       if (d.remarks) {
-        wrapToLines(d.remarks, 45).forEach(function(line, i) {
-          textEl.append("tspan")
-            .attr("x", 0).attr("dy", i === 0 ? "1.5em" : "1.2em")
-            .style("font-style", "italic")
-            .style("opacity", "0.85")
-            .text(line);
+        wrapToLines(d.remarks, 45).forEach(function(line) {
+          lines.push({ text: line, italic: true });
         });
       }
 
+      // Place each line at an explicit y so the text grows downward from y=0.
+      lines.forEach(function(line, i) {
+        textEl.append("tspan")
+          .attr("x", 0)
+          .attr("y", i * LINE)
+          .style("font-style", line.italic ? "italic" : "normal")
+          .style("opacity", line.italic ? "0.85" : "1")
+          .text(line.text);
+      });
+
       var bbox = textEl.node().getBBox();
+      // Position bubble so its bottom edge sits just above the blip.
       d3.select("#bubble")
-        .attr("transform", translate(d.x - bbox.width / 2, d.y - 16))
+        .attr("transform", translate(d.x - bbox.width / 2, d.y - bbox.height - PAD * 2 - 6))
         .style("opacity", 0.8);
       d3.select("#bubble rect")
-        .attr("x", -5)
-        .attr("y", -bbox.height)
-        .attr("width", bbox.width + 10)
-        .attr("height", bbox.height + 4);
+        .attr("x", -PAD)
+        .attr("y", -PAD)
+        .attr("width",  bbox.width  + PAD * 2)
+        .attr("height", bbox.height + PAD * 2);
+      // Pointer triangle sits just below the rect, centred.
       d3.select("#bubble path")
-        .attr("transform", translate(bbox.width / 2 - 5, 3));
+        .attr("transform", translate(bbox.width / 2 - 5, bbox.height + PAD));
     }
   }
 
